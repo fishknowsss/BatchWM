@@ -1,0 +1,407 @@
+:root {
+  font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #211f1b;
+  background: #f7f4ee;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 960px;
+  min-height: 100vh;
+  background: #f7f4ee;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.topbar p {
+  margin: 8px 0 0;
+  color: #686159;
+  font-size: 15px;
+}
+
+.primary-action,
+.icon-button,
+.ghost-button,
+.path-button,
+.watermark-source button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.primary-action {
+  min-width: 136px;
+  padding: 0 18px;
+  color: #fff;
+  background: #1f2a2e;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(360px, 1.05fr) minmax(320px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.left-column,
+.right-column {
+  display: grid;
+  gap: 18px;
+}
+
+.panel {
+  border: 1px solid #ddd4c8;
+  border-radius: 8px;
+  padding: 18px;
+  background: #fffdfa;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-header h2,
+.section-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.icon-button,
+.ghost-button,
+.watermark-source button {
+  padding: 0 12px;
+  color: #2a2723;
+  background: #ece5da;
+}
+
+.queue-list {
+  display: grid;
+  gap: 10px;
+  min-height: 170px;
+}
+
+.queue-item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 54px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee7dd;
+}
+
+.queue-item strong,
+.queue-item span,
+.path-button span,
+.watermark-source span,
+.log-list div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-item strong {
+  display: block;
+  font-size: 14px;
+}
+
+.queue-item span {
+  display: block;
+  margin-top: 4px;
+  color: #6d665e;
+  font-size: 13px;
+}
+
+.ghost-button {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.path-button {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0 14px;
+  color: #211f1b;
+  background: #f2ece2;
+}
+
+.status-strip {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-size: 14px;
+  color: #5f584f;
+}
+
+.settings-panel {
+  min-height: 560px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #eee7dd;
+}
+
+.tabs button {
+  height: 36px;
+  border-radius: 6px;
+  color: #49433c;
+  background: transparent;
+}
+
+.tabs .active {
+  color: #fff;
+  background: #263135;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 108px;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.field-grid label {
+  display: grid;
+  gap: 8px;
+  color: #4d463f;
+  font-size: 14px;
+}
+
+.field-grid input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d8cec1;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+}
+
+.watermark-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  margin-top: 18px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #f4efe7;
+}
+
+.watermark-source div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-block {
+  margin-top: 22px;
+}
+
+.placement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.placement-grid button {
+  height: 46px;
+  border: 1px solid #d8cec1;
+  border-radius: 8px;
+  color: #3d3831;
+  background: #fff;
+}
+
+.placement-grid .selected {
+  border-color: #263135;
+  color: #fff;
+  background: #263135;
+}
+
+.range-control {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+  color: #4d463f;
+  font-size: 14px;
+}
+
+.range-control span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.range-control strong {
+  color: #211f1b;
+}
+
+.range-control input {
+  width: 100%;
+  accent-color: #263135;
+}
+
+.preview-panel {
+  padding-bottom: 20px;
+}
+
+.preview-stage {
+  aspect-ratio: 16 / 10;
+  padding: 16px;
+  border-radius: 8px;
+  background: #ece5da;
+}
+
+.video-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0)),
+    #242b2d;
+}
+
+.frame-line {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.frame-line.top {
+  top: 30%;
+}
+
+.frame-line.bottom {
+  bottom: 30%;
+}
+
+.image-watermark,
+.text-watermark {
+  position: absolute;
+  z-index: 2;
+}
+
+.image-watermark {
+  height: auto;
+  object-fit: contain;
+}
+
+.text-watermark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 48px);
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.log-list {
+  display: grid;
+  gap: 8px;
+  min-height: 180px;
+  color: #4e4740;
+  font-size: 13px;
+}
+
+.log-list div {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee7dd;
+}
+
+.empty-state {
+  display: grid;
+  min-height: 140px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: #81786e;
+  text-align: center;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1060px) {
+  body {
+    min-width: 0;
+  }
+
+  .app-shell {
+    padding: 18px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
