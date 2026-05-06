@@ -58,7 +58,7 @@ export function buildImageWatermarkFilter({
   const widthRatio = normalizeWidthRatio(imageWidthPercent);
   const position = getOverlayExpression(placement);
 
-  return `[1:v]format=rgba,colorchannelmixer=aa=${alpha}[wmraw];[wmraw][0:v]scale2ref=w=main_w*${widthRatio}:h=ow/mdar[wm][base];[base][wm]overlay=${position}:format=auto`;
+  return `[1:v]format=rgba,colorchannelmixer=aa=${alpha}[wmraw];[wmraw][0:v]scale2ref=w=min(main_w\\,main_h)*${widthRatio}:h=ow/mdar[wm][base];[base][wm]overlay=${position}:format=auto`;
 }
 
 export function buildTextWatermarkFilter({

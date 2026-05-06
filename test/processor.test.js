@@ -29,7 +29,7 @@ test('builds ffmpeg args for an image watermark', () => {
     '-i',
     '/tmp/logo.png',
     '-filter_complex',
-    '[1:v]format=rgba,colorchannelmixer=aa=0.72[wmraw];[wmraw][0:v]scale2ref=w=main_w*0.18:h=ow/mdar[wm][base];[base][wm]overlay=(W-w)/2:24:format=auto[v]',
+    '[1:v]format=rgba,colorchannelmixer=aa=0.72[wmraw];[wmraw][0:v]scale2ref=w=min(main_w\\,main_h)*0.18:h=ow/mdar[wm][base];[base][wm]overlay=(W-w)/2:24:format=auto[v]',
     '-map',
     '[v]',
     '-map',

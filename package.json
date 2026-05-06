@@ -22,8 +22,13 @@
       "dist/**/*",
       "electron/**/*",
       "src/shared/**/*",
-      "由十力水印.png",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "由十力水印.png",
+        "to": "assets/由十力水印.png"
+      }
     ],
     "asarUnpack": [
       "node_modules/ffmpeg-static/**/*",

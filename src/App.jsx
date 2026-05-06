@@ -26,8 +26,8 @@ const placementLabels = {
 };
 
 const sourceTabs = [
-  { id: 'default', label: '内置图' },
-  { id: 'upload', label: '上传图' },
+  { id: 'default', label: '内置' },
+  { id: 'upload', label: '图片' },
   { id: 'text', label: '文字' }
 ];
 
@@ -51,13 +51,15 @@ export function App() {
     if (!bridge) return;
     bridge.getDefaultWatermark().then(setDefaultWatermark);
     return bridge.onBatchEvent((event) => {
-      setLogs((current) => [formatEvent(event), ...current].slice(0, 8));
+      setLogs((current) => [formatEvent(event), ...current].slice(0, 10));
       setVideos((current) => updateVideoStatus(current, event));
     });
   }, []);
 
   const activeImage = sourceMode === 'upload' ? uploadedWatermark : defaultWatermark;
-  const readyCount = videos.filter((video) => video.status !== 'done').length;
+  const doneCount = videos.filter((video) => video.status === 'done').length;
+  const failedCount = videos.filter((video) => video.status === 'failed').length;
+  const pendingCount = Math.max(0, videos.length - doneCount - failedCount);
   const canStart = Boolean(
     bridge &&
       videos.length &&
@@ -72,7 +74,7 @@ export function App() {
       ...position,
       opacity,
       width: sourceMode === 'text' ? 'auto' : `${imageWidthPercent}%`,
-      fontSize: `${Math.max(18, Math.min(52, fontSize * 0.72))}px`
+      fontSize: `${Math.max(16, Math.min(48, fontSize * 0.68))}px`
     };
   }, [fontSize, imageWidthPercent, opacity, placement, sourceMode]);
 
@@ -120,56 +122,50 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div>
+      <header className="app-header">
+        <div className="brand-mark" aria-hidden="true">
+          <span />
+        </div>
+        <div className="title-block">
           <h1>批量水印</h1>
-          <p>{videos.length ? `${videos.length} 个视频待处理` : '添加视频后开始处理'}</p>
+          <p>{videos.length ? `${videos.length} 个视频，完成 ${doneCount}` : '选择视频、设置水印、开始输出'}</p>
+        </div>
+        <div className="header-stats" aria-label="处理状态">
+          <span>待处理 {pendingCount}</span>
+          <span>失败 {failedCount}</span>
         </div>
         <button className="primary-action" type="button" disabled={!canStart} onClick={handleStart}>
-          {isProcessing ? <Loader2 className="spin" size={18} /> : <Play size={18} />}
-          开始处理
+          {isProcessing ? <Loader2 className="spin" size={17} /> : <Play size={17} />}
+          开始
         </button>
       </header>
 
       <section className="workspace">
-        <div className="left-column">
-          <Panel title="视频队列" action={<IconButton icon={<Upload size={18} />} label="添加" onClick={handleSelectVideos} />}>
-            <div className="queue-list">
-              {videos.length === 0 ? (
-                <EmptyState icon={<FileVideo size={28} />} text="先添加要处理的视频" />
-              ) : (
-                videos.map((video) => (
-                  <div className="queue-item" key={video.id}>
-                    <FileVideo size={18} />
-                    <div>
-                      <strong>{video.name}</strong>
-                      <span>{videoStatusText(video)}</span>
-                    </div>
+        <Panel title="视频" className="queue-panel" action={<IconButton icon={<Upload size={17} />} label="添加" onClick={handleSelectVideos} />}>
+          <div className="queue-list">
+            {videos.length === 0 ? (
+              <EmptyState icon={<FileVideo size={26} />} text="先添加视频" />
+            ) : (
+              videos.map((video) => (
+                <div className={`queue-item ${video.status}`} key={video.id}>
+                  <FileVideo size={17} />
+                  <div>
+                    <strong>{video.name}</strong>
+                    <span>{videoStatusText(video)}</span>
                   </div>
-                ))
-              )}
-            </div>
-            {videos.length > 0 && (
-              <button className="ghost-button" type="button" onClick={() => setVideos([])} disabled={isProcessing}>
-                <RotateCcw size={16} />
-                清空
-              </button>
+                </div>
+              ))
             )}
-          </Panel>
-
-          <Panel title="输出">
-            <button className="path-button" type="button" onClick={handleSelectOutputDir}>
-              <FolderOpen size={18} />
-              <span>{outputDir || '选择输出目录'}</span>
+          </div>
+          <div className="panel-footer">
+            <button className="ghost-button" type="button" onClick={() => setVideos([])} disabled={!videos.length || isProcessing}>
+              <RotateCcw size={15} />
+              清空
             </button>
-            <div className="status-strip">
-              <span>剩余 {readyCount}</span>
-              <span>完成 {videos.filter((video) => video.status === 'done').length}</span>
-            </div>
-          </Panel>
-        </div>
+          </div>
+        </Panel>
 
-        <Panel title="水印设置" className="settings-panel">
+        <Panel title="水印" className="settings-panel">
           <div className="tabs" role="tablist" aria-label="水印来源">
             {sourceTabs.map((tab) => (
               <button
@@ -191,19 +187,13 @@ export function App() {
               </label>
               <label>
                 字号
-                <input
-                  min="12"
-                  max="160"
-                  type="number"
-                  value={fontSize}
-                  onChange={(event) => setFontSize(Number(event.target.value))}
-                />
+                <input min="12" max="160" type="number" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} />
               </label>
             </div>
           ) : (
             <div className="watermark-source">
               <div>
-                <ImagePlus size={20} />
+                <ImagePlus size={18} />
                 <span>{activeImage?.name || '未选择图片'}</span>
               </div>
               <button type="button" onClick={handleSelectImage}>
@@ -216,54 +206,54 @@ export function App() {
             <div className="section-title">位置</div>
             <div className="placement-grid">
               {placements.map((item) => (
-                <button
-                  key={item}
-                  className={placement === item ? 'selected' : ''}
-                  type="button"
-                  onClick={() => setPlacement(item)}
-                >
+                <button key={item} className={placement === item ? 'selected' : ''} type="button" onClick={() => setPlacement(item)}>
                   {placementLabels[item]}
                 </button>
               ))}
             </div>
           </div>
 
-          <RangeControl label="透明度" min={0} max={1} step={0.05} value={opacity} onChange={setOpacity} suffix="%" />
-          {sourceMode === 'text' ? (
-            <RangeControl label="字号" min={12} max={160} step={1} value={fontSize} onChange={setFontSize} />
-          ) : (
-            <RangeControl label="图片宽度" min={5} max={60} step={1} value={imageWidthPercent} onChange={setImageWidthPercent} suffix="%" />
-          )}
+          <div className="range-row">
+            <RangeControl label="透明度" min={0} max={1} step={0.05} value={opacity} onChange={setOpacity} suffix="%" />
+            {sourceMode === 'text' ? (
+              <RangeControl label="字号" min={12} max={160} step={1} value={fontSize} onChange={setFontSize} />
+            ) : (
+              <RangeControl label="大小" min={5} max={60} step={1} value={imageWidthPercent} onChange={setImageWidthPercent} suffix="%" />
+            )}
+          </div>
+
+          <button className="path-button" type="button" onClick={handleSelectOutputDir}>
+            <FolderOpen size={17} />
+            <span>{outputDir || '选择输出目录'}</span>
+          </button>
         </Panel>
 
-        <div className="right-column">
-          <Panel title="预览" className="preview-panel">
-            <div className="preview-stage">
-              <div className="video-frame">
-                <div className="frame-line top" />
-                <div className="frame-line bottom" />
-                {sourceMode === 'text' ? (
-                  <div className="text-watermark" style={previewStyle}>
-                    <Type size={18} />
-                    {text || '水印'}
-                  </div>
-                ) : activeImage?.url ? (
-                  <img className="image-watermark" src={activeImage.url} alt="水印预览" style={previewStyle} />
-                ) : null}
-              </div>
+        <Panel title="预览" className="preview-panel">
+          <div className="preview-stage">
+            <div className="video-frame">
+              <div className="frame-line top" />
+              <div className="frame-line bottom" />
+              {sourceMode === 'text' ? (
+                <div className="text-watermark" style={previewStyle}>
+                  <Type size={17} />
+                  {text || '水印'}
+                </div>
+              ) : activeImage?.url ? (
+                <img className="image-watermark" src={activeImage.url} alt="水印预览" style={previewStyle} />
+              ) : null}
             </div>
-          </Panel>
-
-          <Panel title="处理记录">
+          </div>
+          <div className="log-shell">
+            <div className="log-title">记录</div>
             <div className="log-list">
               {logs.length === 0 ? (
-                <EmptyState icon={<CheckCircle2 size={28} />} text="开始后在这里查看进度" />
+                <EmptyState icon={<CheckCircle2 size={24} />} text="开始后查看进度" />
               ) : (
                 logs.map((log) => <div key={log}>{log}</div>)
               )}
             </div>
-          </Panel>
-        </div>
+          </div>
+        </Panel>
       </section>
     </main>
   );
@@ -311,14 +301,7 @@ function RangeControl({ label, min, max, step, value, onChange, suffix = '' }) {
           {suffix}
         </strong>
       </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
     </label>
   );
 }
@@ -355,7 +338,7 @@ function formatEvent(event) {
 }
 
 function placementToCss(placement) {
-  const edge = '24px';
+  const edge = '18px';
   const centerX = { left: '50%', transform: 'translateX(-50%)' };
   const centerY = { top: '50%', transform: 'translateY(-50%)' };
 

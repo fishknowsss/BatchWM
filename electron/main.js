@@ -3,11 +3,17 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 
+import { getDefaultWatermarkPath } from './assets.js';
 import { processBatch } from './processor.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const defaultWatermarkPath = path.join(projectRoot, '由十力水印.png');
+const defaultWatermarkPath = () =>
+  getDefaultWatermarkPath({
+    isPackaged: app.isPackaged,
+    projectRoot,
+    resourcesPath: process.resourcesPath
+  });
 
 let mainWindow;
 
@@ -15,8 +21,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 780,
-    minWidth: 980,
-    minHeight: 680,
+    minWidth: 960,
+    minHeight: 660,
     title: '批量水印',
     backgroundColor: '#f7f4ee',
     webPreferences: {
@@ -48,9 +54,9 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.handle('watermark:get-default', async () => ({
-  path: defaultWatermarkPath,
-  url: await imageToDataUrl(defaultWatermarkPath),
-  name: path.basename(defaultWatermarkPath)
+  path: defaultWatermarkPath(),
+  url: await imageToDataUrl(defaultWatermarkPath()),
+  name: path.basename(defaultWatermarkPath())
 }));
 
 ipcMain.handle('dialog:select-videos', async () => {
