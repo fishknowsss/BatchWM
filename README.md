@@ -4,6 +4,10 @@
 
 ## 使用
 
+如果已经安装成 macOS 应用，直接打开“应用程序”里的 `BatchWM`。
+
+源码运行：
+
 ```bash
 npm install
 npm start
@@ -22,3 +26,10 @@ npm start
 - 输出到指定目录，文件名追加 `_watermarked`
 
 应用内置 `ffmpeg-static`，不依赖系统安装 `ffmpeg`。
+
+## 打包安装
+
+```bash
+npm run pack:mac
+cp -R release/mac*/BatchWM.app /Applications/
+```

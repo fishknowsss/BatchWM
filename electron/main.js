@@ -28,7 +28,7 @@ function createWindow() {
   });
 
   const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173';
-  if (process.env.NODE_ENV === 'production') {
+  if (app.isPackaged) {
     mainWindow.loadFile(path.join(projectRoot, 'dist', 'index.html'));
   } else {
     mainWindow.loadURL(devUrl);

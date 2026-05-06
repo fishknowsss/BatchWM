@@ -1,5 +1,6 @@
 {
   "name": "batch-watermark-maker",
+  "productName": "BatchWM",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,19 +9,51 @@
     "dev": "vite --host 127.0.0.1",
     "electron": "electron .",
     "start": "concurrently -k \"npm run dev\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "icon": "node scripts/generate-icons.mjs",
     "build": "vite build",
+    "pack:mac": "npm run icon && npm run build && electron-builder --mac dir",
     "test": "node --test",
     "check": "npm run test && npm run build"
   },
+  "build": {
+    "appId": "com.fishknowsss.batchwm",
+    "productName": "BatchWM",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "src/shared/**/*",
+      "由十力水印.png",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**/*",
+      "node_modules/ffprobe-static/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "icon": "build/icon.icns",
+      "target": [
+        "dir"
+      ]
+    },
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    }
+  },
   "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0"
+  },
+  "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.1",
     "electron": "^42.0.0",
-    "ffmpeg-static": "^5.3.0",
-    "ffprobe-static": "^3.1.0",
+    "electron-builder": "^26.8.1",
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "sharp": "^0.34.5",
     "vite": "^8.0.10",
     "wait-on": "^9.0.5"
   }

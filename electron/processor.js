@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
-import ffmpegPath from 'ffmpeg-static';
+import ffmpegStaticPath from 'ffmpeg-static';
 
 import { buildImageWatermarkFilter, buildTextWatermarkFilter } from '../src/shared/watermark.js';
 
@@ -43,6 +43,7 @@ export function isSupportedVideo(filePath) {
 }
 
 export async function processBatch({ videos, outputDir, watermark }, onEvent = () => {}) {
+  const ffmpegPath = getExecutablePath(ffmpegStaticPath);
   if (!ffmpegPath) {
     throw new Error('ffmpeg 未找到，请重新安装应用依赖。');
   }
@@ -73,7 +74,7 @@ export async function processBatch({ videos, outputDir, watermark }, onEvent = (
 
 function runFfmpeg(args, onLog) {
   return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+    const child = spawn(getExecutablePath(ffmpegStaticPath), args, { stdio: ['ignore', 'ignore', 'pipe'] });
     let lastError = '';
 
     child.stderr.on('data', (chunk) => {
@@ -97,4 +98,8 @@ function runFfmpeg(args, onLog) {
 function pickProgressLine(text) {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   return lines.findLast((line) => line.includes('time=') || line.includes('frame=')) || '';
+}
+
+export function getExecutablePath(binaryPath) {
+  return binaryPath?.replace('app.asar', 'app.asar.unpacked');
 }
