@@ -3,7 +3,6 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 import ffmpegStaticPath from 'ffmpeg-static';
-import ffprobeStatic from 'ffprobe-static';
 
 import { resolvePackagedAssetPath } from './assets.js';
 import { buildImageWatermarkFilter, buildTextWatermarkFilter, normalizeWidthRatio } from '../src/shared/watermark.js';
@@ -187,47 +186,42 @@ function createUniqueOutputPath(inputPath, outputDir, reservedOutputPaths) {
 
 function getVideoInfo(inputPath) {
   return new Promise((resolve, reject) => {
-    const ffprobePath = resolvePackagedAssetPath(ffprobeStatic.path);
-    const child = spawn(ffprobePath, [
-      '-v',
-      'error',
-      '-select_streams',
-      'v:0',
-      '-show_entries',
-      'stream=width',
-      '-show_entries',
-      'format=duration',
-      '-of',
-      'json',
+    const child = spawn(resolvePackagedAssetPath(ffmpegStaticPath), [
+      '-hide_banner',
+      '-i',
       inputPath
     ], {
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'ignore', 'pipe']
     });
-    let output = '';
     let error = '';
-    child.stdout.on('data', (chunk) => {
-      output += chunk.toString();
-    });
     child.stderr.on('data', (chunk) => {
       error += chunk.toString();
     });
     child.on('error', reject);
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(error || `ffprobe 退出码 ${code}`));
-        return;
-      }
-      try {
-        const info = JSON.parse(output);
-        const duration = Number(info?.format?.duration);
-        const width = Number(info?.streams?.[0]?.width);
-        resolve({
-          duration: Number.isFinite(duration) ? duration : null,
-          width: Number.isFinite(width) ? width : null
-        });
-      } catch (error) {
-        reject(error);
-      }
+    child.on('close', () => {
+      resolve(parseVideoInfo(error));
     });
   });
+}
+
+export function parseVideoInfo(text) {
+  return {
+    duration: parseDuration(text),
+    width: parseVideoWidth(text)
+  };
+}
+
+function parseDuration(text) {
+  const match = /Duration:\s*(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/.exec(text);
+  if (!match) return null;
+  const [, hours, minutes, seconds] = match;
+  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+}
+
+function parseVideoWidth(text) {
+  const streamLine = text.split(/\r?\n/).find((line) => line.includes('Video:'));
+  const match = /,\s*(\d{2,5})x\d{2,5}[\s,]/.exec(streamLine || '');
+  if (!match) return null;
+  const width = Number(match[1]);
+  return Number.isFinite(width) ? width : null;
 }

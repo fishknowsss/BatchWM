@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 
-import { buildFfmpegArgs, createOutputPath, estimateRemainingSeconds, parseProgressTime } from '../electron/processor.js';
+import { buildFfmpegArgs, createOutputPath, estimateRemainingSeconds, parseProgressTime, parseVideoInfo } from '../electron/processor.js';
 
 test('creates a stable output path without overwriting the source', () => {
   const output = createOutputPath('/Users/me/Desktop/source/demo.mp4', '/Users/me/Desktop/out');
@@ -68,6 +68,16 @@ test('estimates remaining time from processed media time and elapsed wall time',
     40
   );
   assert.equal(estimateRemainingSeconds({ processedSeconds: 0, totalSeconds: 100, elapsedSeconds: 10 }), null);
+});
+
+test('parses video duration and width from ffmpeg input output', () => {
+  const info = parseVideoInfo(`
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'demo.mp4':
+  Duration: 00:02:03.45, start: 0.000000, bitrate: 1800 kb/s
+  Stream #0:0[0x1]: Video: h264 (High), yuv420p(progressive), 1280x720, 24 fps, 24 tbr
+  `);
+
+  assert.deepEqual(info, { duration: 123.45, width: 1280 });
 });
 
 test('builds ffmpeg args for a text watermark', () => {

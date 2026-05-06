@@ -52,7 +52,7 @@ export function App() {
     if (!bridge) return;
     bridge.getDefaultWatermark().then(setDefaultWatermark);
     return bridge.onBatchEvent((event) => {
-      setLogs((current) => [formatEvent(event), ...current].slice(0, 10));
+      setLogs((current) => updateLogs(current, event));
       if (event.type === 'item-progress') {
         setEstimate({
           remainingSeconds: event.remainingSeconds,
@@ -257,7 +257,11 @@ export function App() {
               {logs.length === 0 ? (
                 <EmptyState icon={<CheckCircle2 size={24} />} text="开始后查看进度" />
               ) : (
-                logs.map((log) => <div key={log}>{log}</div>)
+                logs.map((log) => (
+                  <div className={`log-item ${log.tone}`} key={log.id}>
+                    <span>{log.text}</span>
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -345,6 +349,17 @@ function formatEvent(event) {
   if (event.type === 'item-failed') return `失败：${event.error}`;
   if (event.type === 'item-progress') return event.remainingSeconds ? `预计剩余 ${formatDuration(event.remainingSeconds)}` : '正在估算';
   return event.line || '处理中';
+}
+
+function updateLogs(current, event) {
+  const text = formatEvent(event);
+  const entry = {
+    id: event.type === 'item-progress' ? `progress-${event.id || 'batch'}` : `${event.type}-${event.id || 'batch'}-${Date.now()}`,
+    text,
+    tone: event.type.replace('item-', '')
+  };
+  const next = [entry, ...current.filter((item) => item.id !== entry.id)];
+  return next.slice(0, 8);
 }
 
 function formatDuration(seconds) {
