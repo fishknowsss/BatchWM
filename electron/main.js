@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage } from 'electron';
 
 import { getDefaultWatermarkPath } from './assets.js';
 import { processBatch } from './processor.js';
@@ -24,7 +24,12 @@ function createWindow() {
     minWidth: 960,
     minHeight: 660,
     title: '批量水印',
-    backgroundColor: '#f7f4ee',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 18, y: 18 },
+    backgroundColor: '#fff3df',
+    vibrancy: 'under-window',
+    visualEffectState: 'active',
+    icon: getDockIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -42,6 +47,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  setDockIcon();
   createWindow();
 
   app.on('activate', () => {
@@ -115,4 +121,17 @@ async function imageToDataUrl(filePath) {
   const mime = mimeTypes[ext] || 'application/octet-stream';
   const data = await readFile(filePath);
   return `data:${mime};base64,${data.toString('base64')}`;
+}
+
+function getDockIconPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'icon.icns');
+  }
+  return path.join(projectRoot, 'build', 'icon.png');
+}
+
+function setDockIcon() {
+  if (process.platform !== 'darwin' || !app.dock) return;
+  const icon = nativeImage.createFromPath(getDockIconPath());
+  if (!icon.isEmpty()) app.dock.setIcon(icon);
 }
