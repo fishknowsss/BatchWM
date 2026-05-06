@@ -46,12 +46,19 @@ export function App() {
   const [fontSize, setFontSize] = useState(42);
   const [isProcessing, setIsProcessing] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [estimate, setEstimate] = useState({ remainingSeconds: null, progressPercent: 0 });
 
   useEffect(() => {
     if (!bridge) return;
     bridge.getDefaultWatermark().then(setDefaultWatermark);
     return bridge.onBatchEvent((event) => {
       setLogs((current) => [formatEvent(event), ...current].slice(0, 10));
+      if (event.type === 'item-progress') {
+        setEstimate({
+          remainingSeconds: event.remainingSeconds,
+          progressPercent: event.totalSeconds ? Math.min(100, Math.round((event.processedSeconds / event.totalSeconds) * 100)) : 0
+        });
+      }
       setVideos((current) => updateVideoStatus(current, event));
     });
   }, []);
@@ -100,6 +107,7 @@ export function App() {
     if (!canStart) return;
     setIsProcessing(true);
     setLogs([]);
+    setEstimate({ remainingSeconds: null, progressPercent: 0 });
     setVideos((current) => current.map((video) => ({ ...video, status: 'queued', error: '' })));
 
     const watermark =
@@ -117,15 +125,13 @@ export function App() {
       await bridge.startBatch({ videos, outputDir, watermark });
     } finally {
       setIsProcessing(false);
+      setEstimate((current) => ({ ...current, remainingSeconds: null, progressPercent: current.progressPercent ? 100 : 0 }));
     }
   }
 
   return (
     <main className="app-shell">
       <header className="app-header">
-        <div className="brand-mark" aria-hidden="true">
-          <span />
-        </div>
         <div className="title-block">
           <h1>批量水印</h1>
           <p>{videos.length ? `${videos.length} 个视频，完成 ${doneCount}` : '选择视频、设置水印、开始输出'}</p>
@@ -133,6 +139,7 @@ export function App() {
         <div className="header-stats" aria-label="处理状态">
           <span>待处理 {pendingCount}</span>
           <span>失败 {failedCount}</span>
+          <span>预计 {isProcessing ? formatDuration(estimate.remainingSeconds) : '--'}</span>
         </div>
         <button className="primary-action" type="button" disabled={!canStart} onClick={handleStart}>
           {isProcessing ? <Loader2 className="spin" size={17} /> : <Play size={17} />}
@@ -231,8 +238,6 @@ export function App() {
         <Panel title="预览" className="preview-panel">
           <div className="preview-stage">
             <div className="video-frame">
-              <div className="frame-line top" />
-              <div className="frame-line bottom" />
               {sourceMode === 'text' ? (
                 <div className="text-watermark" style={previewStyle}>
                   <Type size={17} />
@@ -244,7 +249,10 @@ export function App() {
             </div>
           </div>
           <div className="log-shell">
-            <div className="log-title">记录</div>
+            <div className="log-title">
+              <span>记录</span>
+              <strong>{isProcessing ? `${estimate.progressPercent}%` : '待开始'}</strong>
+            </div>
             <div className="log-list">
               {logs.length === 0 ? (
                 <EmptyState icon={<CheckCircle2 size={24} />} text="开始后查看进度" />
@@ -316,6 +324,7 @@ function updateVideoStatus(videos, event) {
   return videos.map((video) => {
     if (video.id !== event.id) return video;
     if (event.type === 'item-start') return { ...video, status: 'processing', outputPath: event.outputPath };
+    if (event.type === 'item-progress') return { ...video, status: 'processing', remainingSeconds: event.remainingSeconds };
     if (event.type === 'item-done') return { ...video, status: 'done', outputPath: event.outputPath };
     if (event.type === 'item-failed') return { ...video, status: 'failed', error: event.error };
     return video;
@@ -323,7 +332,7 @@ function updateVideoStatus(videos, event) {
 }
 
 function videoStatusText(video) {
-  if (video.status === 'processing') return '处理中';
+  if (video.status === 'processing') return video.remainingSeconds ? `处理中，约 ${formatDuration(video.remainingSeconds)}` : '处理中';
   if (video.status === 'done') return '已完成';
   if (video.status === 'failed') return video.error || '失败';
   if (video.status === 'queued') return '等待中';
@@ -334,7 +343,18 @@ function formatEvent(event) {
   if (event.type === 'item-start') return `开始：${event.outputPath}`;
   if (event.type === 'item-done') return `完成：${event.outputPath}`;
   if (event.type === 'item-failed') return `失败：${event.error}`;
+  if (event.type === 'item-progress') return event.remainingSeconds ? `预计剩余 ${formatDuration(event.remainingSeconds)}` : '正在估算';
   return event.line || '处理中';
+}
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds) || seconds === null) return '--';
+  if (seconds <= 0) return '少于 1 秒';
+  const rounded = Math.round(seconds);
+  const minutes = Math.floor(rounded / 60);
+  const rest = rounded % 60;
+  if (minutes <= 0) return `${rest} 秒`;
+  return `${minutes} 分 ${String(rest).padStart(2, '0')} 秒`;
 }
 
 function placementToCss(placement) {

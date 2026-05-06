@@ -31,12 +31,12 @@ test('builds image watermark filter with alpha and scaling', () => {
   const filter = buildImageWatermarkFilter({
     placement: 'bottom-right',
     opacity: 0.35,
-    imageWidthPercent: 24
+    imageTargetWidthPx: 154
   });
 
   assert.equal(
     filter,
-    '[1:v]format=rgba,colorchannelmixer=aa=0.35[wmraw];[wmraw][0:v]scale2ref=w=min(main_w\\,main_h)*0.24:h=ow/mdar[wm][base];[base][wm]overlay=W-w-24:H-h-24:format=auto'
+    '[1:v]format=rgba,colorchannelmixer=aa=0.35,scale=154:-1[wm];[0:v][wm]overlay=W-w-24:H-h-24:format=auto'
   );
 });
 

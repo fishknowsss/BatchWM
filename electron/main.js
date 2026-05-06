@@ -25,7 +25,7 @@ function createWindow() {
     minHeight: 660,
     title: '批量水印',
     titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 18, y: 18 },
+    trafficLightPosition: { x: 22, y: 26 },
     backgroundColor: '#fff3df',
     vibrancy: 'under-window',
     visualEffectState: 'active',

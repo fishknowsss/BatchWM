@@ -52,13 +52,19 @@ export function getDrawTextExpression(placement) {
 export function buildImageWatermarkFilter({
   placement = 'center',
   opacity = 1,
-  imageWidthPercent = 18
+  imageWidthPercent = 18,
+  imageTargetWidthPx
 } = {}) {
   const alpha = normalizeOpacity(opacity);
   const widthRatio = normalizeWidthRatio(imageWidthPercent);
+  const targetWidth = clampInteger(imageTargetWidthPx, 1, 20000, 0);
   const position = getOverlayExpression(placement);
 
-  return `[1:v]format=rgba,colorchannelmixer=aa=${alpha}[wmraw];[wmraw][0:v]scale2ref=w=min(main_w\\,main_h)*${widthRatio}:h=ow/mdar[wm][base];[base][wm]overlay=${position}:format=auto`;
+  if (targetWidth > 0) {
+    return `[1:v]format=rgba,colorchannelmixer=aa=${alpha},scale=${targetWidth}:-1[wm];[0:v][wm]overlay=${position}:format=auto`;
+  }
+
+  return `[1:v]format=rgba,colorchannelmixer=aa=${alpha},scale=iw*${widthRatio}:-1[wm];[0:v][wm]overlay=${position}:format=auto`;
 }
 
 export function buildTextWatermarkFilter({
