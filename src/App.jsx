@@ -133,7 +133,7 @@ export function App() {
     <main className="app-shell">
       <header className="app-header">
         <div className="title-block">
-          <h1>批量水印</h1>
+          <h1>BatchWM批量增添水印</h1>
           <p>{videos.length ? `${videos.length} 个视频，完成 ${doneCount}` : '选择视频、设置水印、开始输出'}</p>
         </div>
         <div className="header-stats" aria-label="处理状态">

@@ -7,9 +7,9 @@
   --line-strong: #e6b98e;
   --text: #2c2119;
   --muted: #745e4d;
-  --accent: #ee7b2f;
-  --accent-strong: #d96920;
-  --accent-soft: #ffe1c4;
+  --accent: #df7f3f;
+  --accent-strong: #c96f34;
+  --accent-soft: #ffe5ce;
   --danger: #c84e33;
   font-family: "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   color: var(--text);
@@ -67,7 +67,7 @@ input:focus-visible {
 
 .app-shell {
   display: grid;
-  grid-template-rows: 78px minmax(0, 1fr);
+  grid-template-rows: 76px minmax(0, 1fr);
   gap: 14px;
   width: 100%;
   height: 100dvh;
@@ -83,10 +83,10 @@ input:focus-visible {
   gap: 14px;
   align-items: center;
   min-height: 0;
-  padding: 10px 14px 10px 96px;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: var(--surface);
+  padding: 8px 8px 8px 96px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .title-block {
@@ -96,7 +96,7 @@ input:focus-visible {
 .title-block h1 {
   margin: 0;
   color: var(--text);
-  font-size: 28px;
+  font-size: 25px;
   line-height: 1;
   letter-spacing: 0;
 }
@@ -144,7 +144,7 @@ input:focus-visible {
 }
 
 .primary-action {
-  height: 48px;
+  height: 46px;
   padding: 0 18px;
   color: #fffaf4;
   background: var(--accent);
@@ -381,8 +381,8 @@ input:focus-visible {
 
 .range-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 13px;
   flex: 0 0 auto;
   margin-top: 18px;
 }
@@ -553,12 +553,11 @@ input:focus-visible {
   .app-header {
     grid-template-columns: minmax(170px, 1fr) auto 104px;
     gap: 10px;
-    padding: 8px 10px 8px 86px;
-    border-radius: 20px;
+    padding: 8px 8px 8px 86px;
   }
 
   .title-block h1 {
-    font-size: 23px;
+    font-size: 20px;
   }
 
   .title-block p,
