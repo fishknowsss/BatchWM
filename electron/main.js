@@ -26,7 +26,7 @@ function createWindow() {
     title: 'BatchWM批量增添水印',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 24, y: 24 },
-    backgroundColor: '#fff8ef',
+    backgroundColor: '#fcfbfa',
     icon: getDockIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

@@ -7,11 +7,21 @@ import {
   Loader2,
   Play,
   RotateCcw,
-  Type,
   Upload
 } from 'lucide-react';
 
-import { placements } from './shared/watermark.js';
+import { buildPreviewWatermarkStyle, placements, watermarkBlendModes } from './shared/watermark.js';
+import { formatAppVersion } from './shared/version.js';
+import {
+  DEFAULT_SOURCE_MODE,
+  DEFAULT_TEXT_FONT_SIZE,
+  DEFAULT_TEXT_WATERMARK,
+  MAX_TEXT_FONT_SIZE,
+  MIN_TEXT_FONT_SIZE
+} from './shared/defaults.js';
+import { readLastOutputDir, rememberLastOutputDir } from './shared/preferences.js';
+import { createVideoItemsFromPaths, getFileNameFromPath, mergeVideos } from './shared/videos.js';
+import packageInfo from '../package.json';
 
 const placementLabels = {
   'top-left': '左上',
@@ -26,25 +36,29 @@ const placementLabels = {
 };
 
 const sourceTabs = [
+  { id: 'text', label: '文字' },
   { id: 'default', label: '内置' },
-  { id: 'upload', label: '图片' },
-  { id: 'text', label: '文字' }
+  { id: 'upload', label: '图片' }
 ];
 
 const bridge = window.batchWM;
+const appVersionLabel = formatAppVersion(packageInfo.version);
 
 export function App() {
   const [videos, setVideos] = useState([]);
   const [defaultWatermark, setDefaultWatermark] = useState(null);
   const [uploadedWatermark, setUploadedWatermark] = useState(null);
-  const [outputDir, setOutputDir] = useState('');
-  const [sourceMode, setSourceMode] = useState('default');
+  const [outputDir, setOutputDir] = useState(() => readLastOutputDir());
+  const [sourceMode, setSourceMode] = useState(DEFAULT_SOURCE_MODE);
   const [placement, setPlacement] = useState('center');
+  const [previewMode, setPreviewMode] = useState('landscape');
   const [opacity, setOpacity] = useState(0.55);
   const [imageWidthPercent, setImageWidthPercent] = useState(18);
-  const [text, setText] = useState('由十力');
-  const [fontSize, setFontSize] = useState(42);
+  const [blendMode, setBlendMode] = useState('normal');
+  const [text, setText] = useState(DEFAULT_TEXT_WATERMARK);
+  const [fontSize, setFontSize] = useState(DEFAULT_TEXT_FONT_SIZE);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDraggingVideos, setIsDraggingVideos] = useState(false);
   const [logs, setLogs] = useState([]);
   const [estimate, setEstimate] = useState({ remainingSeconds: null, progressPercent: 0 });
 
@@ -56,8 +70,11 @@ export function App() {
       if (event.type === 'item-progress') {
         setEstimate({
           remainingSeconds: event.remainingSeconds,
-          progressPercent: event.totalSeconds ? Math.min(100, Math.round((event.processedSeconds / event.totalSeconds) * 100)) : 0
+          progressPercent: Number.isFinite(event.batchProgressPercent) ? event.batchProgressPercent : 0
         });
+      }
+      if (event.type === 'item-done' || event.type === 'item-failed') {
+        setEstimate((current) => ({ ...current, progressPercent: Math.max(current.progressPercent, event.batchProgressPercent || 0) }));
       }
       setVideos((current) => updateVideoStatus(current, event));
     });
@@ -76,19 +93,49 @@ export function App() {
   );
 
   const previewStyle = useMemo(() => {
-    const position = placementToCss(placement);
-    return {
-      ...position,
+    return buildPreviewWatermarkStyle({
+      sourceMode,
+      placement,
       opacity,
-      width: sourceMode === 'text' ? 'auto' : `${imageWidthPercent}%`,
-      fontSize: `${Math.max(16, Math.min(48, fontSize * 0.68))}px`
-    };
-  }, [fontSize, imageWidthPercent, opacity, placement, sourceMode]);
+      imageWidthPercent,
+      fontSize,
+      previewMode,
+      blendMode
+    });
+  }, [blendMode, fontSize, imageWidthPercent, opacity, placement, previewMode, sourceMode]);
 
   async function handleSelectVideos() {
     const selected = await bridge?.selectVideos();
     if (!selected?.length) return;
     setVideos((current) => mergeVideos(current, selected));
+  }
+
+  function handleQueueDragEnter(event) {
+    if (isProcessing || !hasFileDrag(event)) return;
+    event.preventDefault();
+    setIsDraggingVideos(true);
+  }
+
+  function handleQueueDragOver(event) {
+    if (isProcessing || !hasFileDrag(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    setIsDraggingVideos(true);
+  }
+
+  function handleQueueDragLeave(event) {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    setIsDraggingVideos(false);
+  }
+
+  function handleQueueDrop(event) {
+    event.preventDefault();
+    setIsDraggingVideos(false);
+    if (isProcessing) return;
+
+    const droppedVideos = createVideoItemsFromPaths(getDroppedFilePaths(event.dataTransfer?.files));
+    if (!droppedVideos.length) return;
+    setVideos((current) => mergeVideos(current, droppedVideos));
   }
 
   async function handleSelectImage() {
@@ -100,7 +147,9 @@ export function App() {
 
   async function handleSelectOutputDir() {
     const selected = await bridge?.selectOutputDir();
-    if (selected) setOutputDir(selected);
+    if (!selected) return;
+    setOutputDir(selected);
+    rememberLastOutputDir(selected);
   }
 
   async function handleStart() {
@@ -108,17 +157,18 @@ export function App() {
     setIsProcessing(true);
     setLogs([]);
     setEstimate({ remainingSeconds: null, progressPercent: 0 });
-    setVideos((current) => current.map((video) => ({ ...video, status: 'queued', error: '' })));
+    setVideos((current) => current.map((video) => ({ ...video, status: 'queued', error: '', progressPercent: 0 })));
 
     const watermark =
       sourceMode === 'text'
-        ? { mode: 'text', text, placement, opacity, fontSize }
+        ? { mode: 'text', text, placement, opacity, fontSize, blendMode }
         : {
             mode: 'image',
             imagePath: activeImage.path,
             placement,
             opacity,
-            imageWidthPercent
+            imageWidthPercent,
+            blendMode
           };
 
     try {
@@ -133,13 +183,16 @@ export function App() {
     <main className="app-shell">
       <header className="app-header">
         <div className="title-block">
-          <h1>BatchWM批量增添水印</h1>
+          <div className="title-heading">
+            <h1>BatchWM批量增添水印</h1>
+            <span className="app-version">{appVersionLabel}</span>
+          </div>
           <p>{videos.length ? `${videos.length} 个视频，完成 ${doneCount}` : '选择视频、设置水印、开始输出'}</p>
         </div>
         <div className="header-stats" aria-label="处理状态">
           <span>待处理 {pendingCount}</span>
           <span>失败 {failedCount}</span>
-          <span>预计 {isProcessing ? formatDuration(estimate.remainingSeconds) : '--'}</span>
+          <span>预计 {formatEstimate(isProcessing, estimate.remainingSeconds)}</span>
         </div>
         <button className="primary-action" type="button" disabled={!canStart} onClick={handleStart}>
           {isProcessing ? <Loader2 className="spin" size={17} /> : <Play size={17} />}
@@ -148,10 +201,18 @@ export function App() {
       </header>
 
       <section className="workspace">
-        <Panel title="视频" className="queue-panel" action={<IconButton icon={<Upload size={17} />} label="添加" onClick={handleSelectVideos} />}>
+        <Panel
+          title="视频"
+          className={`queue-panel ${isDraggingVideos ? 'drag-active' : ''}`}
+          action={<IconButton icon={<Upload size={17} />} label="添加" onClick={handleSelectVideos} disabled={isProcessing} />}
+          onDragEnter={handleQueueDragEnter}
+          onDragOver={handleQueueDragOver}
+          onDragLeave={handleQueueDragLeave}
+          onDrop={handleQueueDrop}
+        >
           <div className="queue-list">
             {videos.length === 0 ? (
-              <EmptyState icon={<FileVideo size={26} />} text="先添加视频" />
+              <EmptyState icon={<FileVideo size={26} />} text="拖入视频或点添加" />
             ) : (
               videos.map((video) => (
                 <div className={`queue-item ${video.status}`} key={video.id}>
@@ -194,7 +255,13 @@ export function App() {
               </label>
               <label>
                 字号
-                <input min="12" max="160" type="number" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} />
+                <input
+                  min={MIN_TEXT_FONT_SIZE}
+                  max={MAX_TEXT_FONT_SIZE}
+                  type="number"
+                  value={fontSize}
+                  onChange={(event) => setFontSize(Number(event.target.value))}
+                />
               </label>
             </div>
           ) : (
@@ -223,24 +290,55 @@ export function App() {
           <div className="range-row">
             <RangeControl label="透明度" min={0} max={1} step={0.05} value={opacity} onChange={setOpacity} suffix="%" />
             {sourceMode === 'text' ? (
-              <RangeControl label="字号" min={12} max={160} step={1} value={fontSize} onChange={setFontSize} />
+              <RangeControl label="字号" min={MIN_TEXT_FONT_SIZE} max={MAX_TEXT_FONT_SIZE} step={1} value={fontSize} onChange={setFontSize} />
             ) : (
-              <RangeControl label="大小" min={5} max={60} step={1} value={imageWidthPercent} onChange={setImageWidthPercent} suffix="%" />
+              <RangeControl label="大小" min={5} max={80} step={1} value={imageWidthPercent} onChange={setImageWidthPercent} suffix="%" />
             )}
+          </div>
+
+          <div className="control-block blend-block">
+            <div className="section-title">叠化</div>
+            <div className="blend-grid">
+              {watermarkBlendModes.map((mode) => (
+                <button key={mode.id} className={blendMode === mode.id ? 'selected' : ''} type="button" onClick={() => setBlendMode(mode.id)}>
+                  {mode.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button className="path-button" type="button" onClick={handleSelectOutputDir}>
             <FolderOpen size={17} />
-            <span>{outputDir || '选择输出目录'}</span>
+            <span>{outputDir || '输出目录'}</span>
           </button>
         </Panel>
 
-        <Panel title="预览" className="preview-panel">
+        <Panel
+          title="预览"
+          className="preview-panel"
+          action={
+            <div className="preview-toggle" aria-label="预览比例">
+              <button
+                className={previewMode === 'landscape' ? 'active' : ''}
+                type="button"
+                onClick={() => setPreviewMode('landscape')}
+              >
+                横屏
+              </button>
+              <button
+                className={previewMode === 'portrait' ? 'active' : ''}
+                type="button"
+                onClick={() => setPreviewMode('portrait')}
+              >
+                竖屏
+              </button>
+            </div>
+          }
+        >
           <div className="preview-stage">
-            <div className="video-frame">
+            <div className={`video-frame ${previewMode}`}>
               {sourceMode === 'text' ? (
                 <div className="text-watermark" style={previewStyle}>
-                  <Type size={17} />
                   {text || '水印'}
                 </div>
               ) : activeImage?.url ? (
@@ -258,9 +356,7 @@ export function App() {
                 <EmptyState icon={<CheckCircle2 size={24} />} text="开始后查看进度" />
               ) : (
                 logs.map((log) => (
-                  <div className={`log-item ${log.tone}`} key={log.id}>
-                    <span>{log.text}</span>
-                  </div>
+                  <LogItem log={log} key={log.id} />
                 ))
               )}
             </div>
@@ -271,9 +367,9 @@ export function App() {
   );
 }
 
-function Panel({ title, action, className = '', children }) {
+function Panel({ title, action, className = '', children, ...props }) {
   return (
-    <section className={`panel ${className}`}>
+    <section className={`panel ${className}`} {...props}>
       <div className="panel-header">
         <h2>{title}</h2>
         {action}
@@ -283,12 +379,24 @@ function Panel({ title, action, className = '', children }) {
   );
 }
 
-function IconButton({ icon, label, onClick }) {
+function IconButton({ icon, label, onClick, disabled = false }) {
   return (
-    <button className="icon-button" type="button" onClick={onClick}>
+    <button className="icon-button" type="button" onClick={onClick} disabled={disabled}>
       {icon}
       {label}
     </button>
+  );
+}
+
+function LogItem({ log }) {
+  return (
+    <div className={`log-item ${log.tone}`}>
+      <span className="log-label">{log.label}</span>
+      <div className="log-content">
+        <strong title={log.title}>{log.title}</strong>
+        {log.detail ? <span title={log.detail}>{log.detail}</span> : null}
+      </div>
+    </div>
   );
 }
 
@@ -318,25 +426,22 @@ function RangeControl({ label, min, max, step, value, onChange, suffix = '' }) {
   );
 }
 
-function mergeVideos(current, selected) {
-  const existingPaths = new Set(current.map((video) => video.path));
-  return [...current, ...selected.filter((video) => !existingPaths.has(video.path))];
-}
-
 function updateVideoStatus(videos, event) {
   if (!event.id) return videos;
   return videos.map((video) => {
     if (video.id !== event.id) return video;
-    if (event.type === 'item-start') return { ...video, status: 'processing', outputPath: event.outputPath };
-    if (event.type === 'item-progress') return { ...video, status: 'processing', remainingSeconds: event.remainingSeconds };
-    if (event.type === 'item-done') return { ...video, status: 'done', outputPath: event.outputPath };
+    if (event.type === 'item-start') return { ...video, status: 'processing', progressPercent: 0, outputPath: event.outputPath };
+    if (event.type === 'item-progress') return { ...video, status: 'processing', progressPercent: event.itemProgressPercent };
+    if (event.type === 'item-done') return { ...video, status: 'done', progressPercent: 100, outputPath: event.outputPath };
     if (event.type === 'item-failed') return { ...video, status: 'failed', error: event.error };
     return video;
   });
 }
 
 function videoStatusText(video) {
-  if (video.status === 'processing') return video.remainingSeconds ? `处理中，约 ${formatDuration(video.remainingSeconds)}` : '处理中';
+  if (video.status === 'processing') {
+    return Number.isFinite(video.progressPercent) && video.progressPercent > 0 ? `处理中 ${video.progressPercent}%` : '处理中';
+  }
   if (video.status === 'done') return '已完成';
   if (video.status === 'failed') return video.error || '失败';
   if (video.status === 'queued') return '等待中';
@@ -344,18 +449,46 @@ function videoStatusText(video) {
 }
 
 function formatEvent(event) {
-  if (event.type === 'item-start') return `开始：${event.outputPath}`;
-  if (event.type === 'item-done') return `完成：${event.outputPath}`;
-  if (event.type === 'item-failed') return `失败：${event.error}`;
-  if (event.type === 'item-progress') return event.remainingSeconds ? `预计剩余 ${formatDuration(event.remainingSeconds)}` : '正在估算';
-  return event.line || '处理中';
+  if (event.type === 'item-start') {
+    return {
+      label: '开始',
+      title: getFileNameFromPath(event.outputPath),
+      detail: event.outputPath
+    };
+  }
+  if (event.type === 'item-done') {
+    return {
+      label: '完成',
+      title: getFileNameFromPath(event.outputPath),
+      detail: event.outputPath
+    };
+  }
+  if (event.type === 'item-failed') {
+    return {
+      label: '失败',
+      title: '处理失败',
+      detail: event.error
+    };
+  }
+  if (event.type === 'item-progress') {
+    return {
+      label: '预计',
+      title: Number.isFinite(event.remainingSeconds) ? `剩余 ${formatDuration(event.remainingSeconds)}` : '正在估算',
+      detail: Number.isFinite(event.batchProgressPercent) ? `整批 ${event.batchProgressPercent}%` : ''
+    };
+  }
+  return {
+    label: '信息',
+    title: event.line || '处理中',
+    detail: ''
+  };
 }
 
 function updateLogs(current, event) {
-  const text = formatEvent(event);
+  const message = formatEvent(event);
   const entry = {
-    id: event.type === 'item-progress' ? `progress-${event.id || 'batch'}` : `${event.type}-${event.id || 'batch'}-${Date.now()}`,
-    text,
+    id: event.type === 'item-progress' ? 'progress-batch' : `${event.type}-${event.id || 'batch'}-${Date.now()}`,
+    ...message,
     tone: event.type.replace('item-', '')
   };
   const next = [entry, ...current.filter((item) => item.id !== entry.id)];
@@ -364,30 +497,28 @@ function updateLogs(current, event) {
 
 function formatDuration(seconds) {
   if (!Number.isFinite(seconds) || seconds === null) return '--';
-  if (seconds <= 0) return '少于 1 秒';
+  if (seconds <= 0) return '<1秒';
   const rounded = Math.round(seconds);
-  const minutes = Math.floor(rounded / 60);
+  const hours = Math.floor(rounded / 3600);
+  const minutes = Math.floor((rounded % 3600) / 60);
   const rest = rounded % 60;
-  if (minutes <= 0) return `${rest} 秒`;
-  return `${minutes} 分 ${String(rest).padStart(2, '0')} 秒`;
+  if (hours > 0) return `${hours}时${String(minutes).padStart(2, '0')}分`;
+  if (minutes > 0) return `${minutes}分${String(rest).padStart(2, '0')}秒`;
+  return `${rest}秒`;
 }
 
-function placementToCss(placement) {
-  const edge = '18px';
-  const centerX = { left: '50%', transform: 'translateX(-50%)' };
-  const centerY = { top: '50%', transform: 'translateY(-50%)' };
+function formatEstimate(isProcessing, remainingSeconds) {
+  if (!isProcessing) return '--';
+  if (!Number.isFinite(remainingSeconds)) return '估算中';
+  return formatDuration(remainingSeconds);
+}
 
-  const map = {
-    center: { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' },
-    'top-left': { left: edge, top: edge },
-    top: { ...centerX, top: edge },
-    'top-right': { right: edge, top: edge },
-    right: { ...centerY, right: edge },
-    'bottom-right': { right: edge, bottom: edge },
-    bottom: { ...centerX, bottom: edge },
-    'bottom-left': { left: edge, bottom: edge },
-    left: { ...centerY, left: edge }
-  };
+function hasFileDrag(event) {
+  return Array.from(event.dataTransfer?.types || []).includes('Files');
+}
 
-  return map[placement] || map.center;
+function getDroppedFilePaths(files) {
+  return Array.from(files || [])
+    .map((file) => bridge?.getPathForFile?.(file) || file.path || '')
+    .filter(Boolean);
 }
