@@ -1,8 +1,21 @@
 # BatchWM
 
+[![Check](https://github.com/fishknowsss/BatchWM/actions/workflows/check.yml/badge.svg)](https://github.com/fishknowsss/BatchWM/actions/workflows/check.yml)
+
 BatchWM 是一个本地运行的 macOS 批量视频水印工具。它用 Electron 提供桌面界面，用内置 `ffmpeg-static` 完成视频处理，适合把一组视频统一输出为带文字或图片水印的 H.264/AAC MP4。
 
 当前版本：`0.1.3`
+
+## 下载
+
+从 [GitHub Releases](https://github.com/fishknowsss/BatchWM/releases) 下载最新的 macOS 版本。
+
+当前发布流程会在推送 `vX.Y.Z` 标签后自动构建并上传：
+
+- `BatchWM-X.Y.Z-mac-arm64.zip`
+- `BatchWM-X.Y.Z-mac-arm64.zip.sha256`
+
+当前构建没有代码签名和 notarization。首次打开时，macOS 可能需要在 Finder 中右键选择“打开”。
 
 ## 功能
 
@@ -106,6 +119,19 @@ ditto release/mac-arm64/BatchWM.app /Applications/BatchWM.app
 
 当前配置生成的是应用目录，不是签名安装包，也没有配置 notarization。
 
+## 发布
+
+GitHub Actions 会在 `main` 分支推送和 pull request 时运行 `npm run check`。
+
+发布 macOS 版本时，先确认 `package.json` 中的版本号，然后创建并推送同名标签：
+
+```bash
+git tag v0.1.3
+git push origin v0.1.3
+```
+
+标签推送后，`.github/workflows/release.yml` 会在 GitHub runner 上执行测试、构建、打包，并把 macOS arm64 zip 与 sha256 上传到 GitHub Release。
+
 ## 验证
 
 运行测试：
@@ -160,4 +186,4 @@ BatchWM/
 
 ## 许可证
 
-仓库目前没有配置开源许可证。公开仓库前，如需允许他人复制、修改或分发，请先补充 `LICENSE`。
+[MIT](LICENSE)
