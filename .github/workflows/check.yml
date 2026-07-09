@@ -14,7 +14,7 @@ permissions:
 jobs:
   check:
     name: Test and build
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
       - name: Checkout
