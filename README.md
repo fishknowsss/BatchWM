@@ -130,7 +130,7 @@ git tag v0.1.3
 git push origin v0.1.3
 ```
 
-标签推送后，`.github/workflows/release.yml` 会在 GitHub runner 上执行测试、构建、打包，并把 macOS arm64 zip 与 sha256 上传到 GitHub Release。
+标签推送后，`.github/workflows/release.yml` 会在 GitHub runner 上执行测试、构建、打包，并把 macOS arm64 zip 与 sha256 上传到 GitHub Release。该 workflow 也支持手动运行，输入已有 tag 后会重新构建并覆盖上传同名资产。
 
 ## 验证
 
