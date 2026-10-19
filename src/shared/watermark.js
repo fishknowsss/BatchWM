@@ -124,7 +124,7 @@ export function buildTextWatermarkFilter({
   const fontColor = normalizedBlendMode === 'dark' ? `black@${alpha}` : `white@${alpha}`;
   const blendOptions = textBlendOptions[normalizedBlendMode] || '';
 
-  return `drawtext=${fontOption}text='${safeText}':fontsize=${size}:fontcolor=${fontColor}${blendOptions}:box=0:x=${x}:y=${y}`;
+  return `drawtext=${fontOption}text='${safeText}':fontsize=${size}:fontcolor=${fontColor}${blendOptions}:expansion=none:box=0:x=${x}:y=${y}`;
 }
 
 export function normalizeWidthRatio(percent) {
@@ -179,7 +179,7 @@ export function buildPreviewWatermarkStyle({
 export function escapeDrawText(text) {
   return String(text)
     .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
+    .replace(/'/g, String.raw`'\\\''`)
     .replace(/:/g, '\\:')
     .replace(/\n/g, ' ');
 }

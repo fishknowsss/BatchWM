@@ -160,7 +160,7 @@ test('builds ffmpeg args for a text watermark', () => {
     '-i',
     '/tmp/in.mov',
     '-filter_complex',
-    "[0:v]drawtext=fontfile='/System/Library/Fonts/Hiragino Sans GB.ttc':text='测试水印':fontsize=107:fontcolor=white@0.6:box=0:x=24:y=(h-text_h)/2[v]",
+    "[0:v]drawtext=fontfile='/System/Library/Fonts/Hiragino Sans GB.ttc':text='测试水印':fontsize=107:fontcolor=white@0.6:expansion=none:box=0:x=24:y=(h-text_h)/2[v]",
     '-map',
     '[v]',
     '-map',

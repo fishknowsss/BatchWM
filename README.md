@@ -4,7 +4,7 @@
 
 BatchWM 是一个本地运行的 macOS 批量视频水印工具。它用 Electron 提供桌面界面，用内置 `ffmpeg-static` 完成视频处理，适合把一组视频统一输出为带文字或图片水印的 H.264/AAC MP4。
 
-当前版本：`0.1.3`
+当前版本：`0.1.4`
 
 ## 下载
 
@@ -126,8 +126,8 @@ GitHub Actions 会在 `main` 分支推送和 pull request 时运行 `npm run che
 发布 macOS 版本时，先确认 `package.json` 中的版本号，然后创建并推送同名标签：
 
 ```bash
-git tag v0.1.3
-git push origin v0.1.3
+git tag v0.1.4
+git push origin v0.1.4
 ```
 
 标签推送后，`.github/workflows/release.yml` 会在 GitHub runner 上执行测试、构建、打包，并把 macOS arm64 zip 与 sha256 上传到 GitHub Release。该 workflow 也支持手动运行，输入已有 tag 后会重新构建并覆盖上传同名资产。

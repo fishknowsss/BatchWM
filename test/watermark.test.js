@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import ffmpeg from 'ffmpeg-static';
 
 import {
   buildImageWatermarkFilter,
@@ -10,6 +12,30 @@ import {
   normalizeOpacity,
   watermarkBlendModes
 } from '../src/shared/watermark.js';
+
+test('renders literal percent text through ffmpeg instead of dropping the watermark', () => {
+  const result = spawnSync(ffmpeg, [
+    '-hide_banner', '-f', 'lavfi', '-i', 'color=c=black:s=640x360:d=0.04',
+    '-vf', buildTextWatermarkFilter({ text: '100% quality', fontSize: 60 }),
+    '-frames:v', '1', '-pix_fmt', 'gray', '-f', 'rawvideo', '-'
+  ], { maxBuffer: 1024 * 1024 });
+
+  assert.equal(result.status, 0, result.stderr.toString());
+  assert.doesNotMatch(result.stderr.toString(), /Stray %/);
+  assert.ok(result.stdout.some((pixel) => pixel > 200), 'watermark must draw visible text on the black frame');
+});
+
+test('preserves apostrophes through both ffmpeg filter parsing layers', () => {
+  const result = spawnSync(ffmpeg, [
+    '-hide_banner', '-loglevel', 'debug', '-f', 'lavfi', '-i', 'color=c=black:s=640x360:d=0.04',
+    '-vf', buildTextWatermarkFilter({ text: "it's fine", fontSize: 60 }),
+    '-frames:v', '1', '-f', 'null', '-'
+  ]);
+
+  assert.equal(result.status, 0, result.stderr.toString());
+  assert.ok(result.stderr.toString().includes("Setting 'text' to value 'it's fine'"));
+  assert.ok(result.stderr.toString().includes("Setting 'fontsize' to value '60'"));
+});
 
 test('maps all nine placement options to ffmpeg overlay expressions', () => {
   assert.equal(getOverlayExpression('center'), '(W-w)/2:(H-h)/2');
@@ -81,18 +107,18 @@ test('builds text watermark filter with escaped text and alpha color', () => {
 
   assert.equal(
     filter,
-    "drawtext=text='由十力\\'s 水印':fontsize=160:fontcolor=white@0.5:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
+    String.raw`drawtext=text='由十力'\\\''s 水印':fontsize=160:fontcolor=white@0.5:expansion=none:box=0:x=(w-text_w)/2:y=(h-text_h)/2`
   );
 });
 
 test('scales text watermark font size from the output display height', () => {
   assert.equal(
     buildTextWatermarkFilter({ text: '同规格', fontSize: 160, videoWidth: 720, videoHeight: 1280 }),
-    "drawtext=text='同规格':fontsize=107:fontcolor=white@1:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
+    "drawtext=text='同规格':fontsize=107:fontcolor=white@1:expansion=none:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
   );
   assert.equal(
     buildTextWatermarkFilter({ text: '同规格', fontSize: 160, videoWidth: 2160, videoHeight: 3840 }),
-    "drawtext=text='同规格':fontsize=320:fontcolor=white@1:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
+    "drawtext=text='同规格':fontsize=320:fontcolor=white@1:expansion=none:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
   );
 });
 
@@ -107,7 +133,7 @@ test('builds text watermark filter with an explicit font file', () => {
 
   assert.equal(
     filter,
-    "drawtext=fontfile='/System/Library/Fonts/PingFang.ttc':text='Abc 中文':fontsize=80:fontcolor=white@0.8:box=0:x=(w-text_w)/2:y=h-text_h-24"
+    "drawtext=fontfile='/System/Library/Fonts/PingFang.ttc':text='Abc 中文':fontsize=80:fontcolor=white@0.8:expansion=none:box=0:x=(w-text_w)/2:y=h-text_h-24"
   );
 });
 
@@ -122,18 +148,18 @@ test('builds text watermark filter with a stamp blend effect', () => {
 
   assert.equal(
     filter,
-    "drawtext=text='印记':fontsize=60:fontcolor=white@0.65:borderw=1:bordercolor=black@0.28:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
+    "drawtext=text='印记':fontsize=60:fontcolor=white@0.65:borderw=1:bordercolor=black@0.28:expansion=none:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
   );
 });
 
 test('clamps text watermark font size to the configured range', () => {
   assert.equal(
     buildTextWatermarkFilter({ text: '小', fontSize: 12 }),
-    "drawtext=text='小':fontsize=60:fontcolor=white@1:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
+    "drawtext=text='小':fontsize=60:fontcolor=white@1:expansion=none:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
   );
   assert.equal(
     buildTextWatermarkFilter({ text: '大', fontSize: 420 }),
-    "drawtext=text='大':fontsize=300:fontcolor=white@1:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
+    "drawtext=text='大':fontsize=300:fontcolor=white@1:expansion=none:box=0:x=(w-text_w)/2:y=(h-text_h)/2"
   );
 });
 
